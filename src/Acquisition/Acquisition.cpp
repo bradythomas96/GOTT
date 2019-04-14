@@ -52,13 +52,16 @@
 #include <sstream> 
 #include <ctime>
 #include <opencv2/features2d/features2d.hpp>
+#include "SerialInterface.h"
 
 using namespace Spinnaker;
 using namespace Spinnaker::GenApi;
 using namespace Spinnaker::GenICam;
 using namespace std;
 using namespace cv;
+using namespace Senior;
 
+SerialInterface stepperControl;
 
 Mat frame;
 Mat fgMaskMOG2;
@@ -448,6 +451,8 @@ int main(int /*argc*/, char** /*argv*/)
 
     int result = 0;
 
+    stepperControl.Open();
+
     // Print application build information
     // cout << "Application build date: " << __DATE__ << " " << __TIME__ << endl << endl;
 
@@ -530,6 +535,8 @@ int main(int /*argc*/, char** /*argv*/)
 
     // Release system
     system->ReleaseInstance();
+    
+    stepperControl.Close();
 
     cout << endl << "Done! Press Enter to exit..." << endl;
     getchar();
