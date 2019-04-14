@@ -1,9 +1,12 @@
-#pragma once
+#ifndef __DATAEXCHANGE_H__
+#define __DATAEXCHANGE_H__
 
 class DataExchange {
 public:
 	DataExchange();
-	void update();
+	static DataExchange* Instance();
+	bool Serialize();
+	bool Deserialize();
 	int motorAlpha;
 	int motorBeta;
 	int targetPositionX;
@@ -21,7 +24,11 @@ public:
 	int targetDistance;
 	bool pointofEntry; // false is right and true is left
 	double sunPos;
+
+	private:
+	static DataExchange* mInstance;
 };
 
-extern DataExchange* GetExchangeInstance();
-extern int GUI_main();
+
+
+#endif
