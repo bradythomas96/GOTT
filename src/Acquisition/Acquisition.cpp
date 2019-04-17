@@ -53,6 +53,12 @@
 #include <ctime>
 #include <opencv2/features2d/features2d.hpp>
 #include "SerialInterface.h"
+#include "math.h"
+#include <vector>
+#include <chrono>
+#include <cstdlib>
+#include <algorithm>
+#include <tuple>
 
 using namespace Spinnaker;
 using namespace Spinnaker::GenApi;
@@ -60,24 +66,40 @@ using namespace Spinnaker::GenICam;
 using namespace std;
 using namespace cv;
 using namespace Senior;
+using namespace chrono;
 
 SerialInterface stepperControl;
 
 Mat frame;
 Mat fgMaskMOG2;
+Mat thresh;
+vector<Point> locs;
+vector<int> xloc;
+vector<int> yloc;
+int stepSet = 800;
+int targetDist = 0;
+string entry;
+bool POE;
+bool dirLogic;
 Ptr <BackgroundSubtractorMOG2> pMOG2;
 int imageCnt = 0;
+long long timeDelay = 0.320;
 #define SSTR( x ) static_cast< std::ostringstream & >( \
 ( std::ostringstream() << std::dec << x ) ).str()
 
 
-
+tuple<int,bool> calcStep(vector<int> xloc, int targetDist, int count, long long timeDelay);
+int xError(vector<int> xloc, int count);
+int yError(vector<int> yloc, int count);
 
 // This function acquires and saves 10 images from a device.  
 int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice)
 {
     int result = 0;
-
+	int i = 0;
+	int step = 0;
+	int stepCount = 0;
+	long long maxTime = 0.0;
     // cout << endl << endl << "*** IMAGE ACQUISITION ***" << endl << endl;
 
     try
@@ -169,13 +191,14 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
         const unsigned int k_numImages = 5;
 		char userInput;
 		// cin >> userInput;
-		pMOG2 = createBackgroundSubtractorMOG2();
+		pMOG2 = createBackgroundSubtractorMOG2(5,32,false);
 		
 		
 
         // for (unsigned int imageCnt = 0; imageCnt < k_numImages; imageCnt++)
 		while (/* userInput != 'q'*/ 1)
         {
+			auto start = high_resolution_clock::now();
             try
             {
                 //
@@ -208,36 +231,36 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
                      //   << Image::GetImageStatusDescription(pResultImage->GetImageStatus())
                      //   << "..." << endl << endl;
                 }
-                else
-                {
-                    //
-                    // Print image information; height and width recorded in pixels
-                    //
-                    // *** NOTES ***
-                    // Images have quite a bit of available metadata including
-                    // things such as CRC, image status, and offset values, to
-                    // name a few.
-                    //
-                    //size_t width = pResultImage->GetWidth();
+				else
+				{
+					//
+					// Print image information; height and width recorded in pixels
+					//
+					// *** NOTES ***
+					// Images have quite a bit of available metadata including
+					// things such as CRC, image status, and offset values, to
+					// name a few.
+					//
+					//size_t width = pResultImage->GetWidth();
 
-                    //size_t height = pResultImage->GetHeight();
+					//size_t height = pResultImage->GetHeight();
 
-                    // cout << "Grabbed image " << imageCnt << ", width = " << width << ", height = " << height << endl;
+					// cout << "Grabbed image " << imageCnt << ", width = " << width << ", height = " << height << endl;
 
-                    //
-                    // Convert image to mono 8
-                    //
-                    // *** NOTES ***
-                    // Images can be converted between pixel formats by using 
-                    // the appropriate enumeration value. Unlike the original 
-                    // image, the converted one does not need to be released as 
-                    // it does not affect the camera buffer.
-                    //
-                    // When converting images, color processing algorithm is an
-                    // optional parameter.
-                    // 
-					
-                    ImagePtr convertedImage = pResultImage->Convert(PixelFormat_Mono8, HQ_LINEAR);
+					//
+					// Convert image to mono 8
+					//
+					// *** NOTES ***
+					// Images can be converted between pixel formats by using 
+					// the appropriate enumeration value. Unlike the original 
+					// image, the converted one does not need to be released as 
+					// it does not affect the camera buffer.
+					//
+					// When converting images, color processing algorithm is an
+					// optional parameter.
+					// 
+
+					ImagePtr convertedImage = pResultImage->Convert(PixelFormat_Mono8, HQ_LINEAR);
 					unsigned int xpadding = convertedImage->GetXPadding();
 					unsigned int ypadding = convertedImage->GetYPadding();
 					unsigned int rowsize = convertedImage->GetWidth();
@@ -246,9 +269,9 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
 					int cvFormat = CV_8UC1;
 
 					Mat cvMat = Mat(colsize + ypadding, rowsize + xpadding, cvFormat, convertedImage->GetData(), convertedImage->GetStride());
-					
-					
-			
+
+
+
 
 					/*Ptr<Tracker> tracker;
 					tracker = TrackerKCF::create();
@@ -258,54 +281,93 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
 					imshow("Tracking", cvMat);
 					tracker->init(frame, bbox);
 					waitKey(1); */
-                    // Create a unique filename
-                    // ostringstream filename;
+					// Create a unique filename
+					// ostringstream filename;
 
-                    /*filename << "Acquisition-";
-                    if (deviceSerialNumber != "")
-                    {
-                        filename << deviceSerialNumber.c_str() << "-";
-                    }
-                    filename << imageCnt << ".png";
+					/*filename << "Acquisition-";
+					if (deviceSerialNumber != "")
+					{
+						filename << deviceSerialNumber.c_str() << "-";
+					}
+					filename << imageCnt << ".png";
 					*/
-					
-                    //
-                    // Save image
-                    // 
-                    // *** NOTES ***
-                    // The standard practice of the examples is to use device
-                    // serial numbers to keep images of one device from 
-                    // overwriting those of another.
-                    //
-                    //convertedImage->Save(filename.str().c_str());
 
-                   //  cout << "Image saved at " << filename.str() << endl;
-					
-					
+					//
+					// Save image
+					// 
+					// *** NOTES ***
+					// The standard practice of the examples is to use device
+					// serial numbers to keep images of one device from 
+					// overwriting those of another.
+					//
+					//convertedImage->Save(filename.str().c_str());
 
-					// namedWindow("Subtraction", WINDOW_AUTOSIZE);
-					if (imageCnt % 25 == 0) {
+				   //  cout << "Image saved at " << filename.str() << endl;
+
+
+
+
+					if (imageCnt % 15 == 0) {
 						namedWindow("Current Frame", WINDOW_AUTOSIZE);
 						pMOG2->apply(cvMat, fgMaskMOG2);
-						Moments m = moments(fgMaskMOG2, true);
+						threshold(fgMaskMOG2, thresh, 0, 255, 0);
+						Moments m = moments(thresh, true);
+						int x = m.m10 / m.m00;
+						int y = m.m01 / m.m00;
 						Point p(m.m10 / m.m00, m.m01 / m.m00);
+						locs.push_back(p);
+						xloc.push_back(x);
+						yloc.push_back(y);
+						if (i > 0) {
+							xError(xloc, i);
+							yError(yloc, i);
+							auto stepData = calcStep(xloc, targetDist, i, timeDelay);
+							step = get<0>(stepData);
+							dirLogic = get<1>(stepData);
+
+							if (targetDist == 300)
+							{
+								//step this much
+								printf("%d, %d\r\n", dirLogic, step);
+								stepperControl.WriteMessage(dirLogic, step);
+								stepCount += step;
+								if ((stepCount >= 298) && (imageCnt > 1400)) {
+									break;
+								}
+
+							}
+
+							else if (targetDist == 50) {
+								//step this much
+								printf("%d, %d\r\n", dirLogic, step);
+								stepperControl.WriteMessage(dirLogic, step);
+								stepCount += step;
+								if ((stepCount >= 552) && (imageCnt > 460)) {
+									break;
+								}
+							}
+
+						}
+						i += 1;
 						cout << Mat(p) << endl;
-						circle(cvMat, p, 5, Scalar(0, 255, 255), -1);
-						//imshow("Subtraction", fgMaskMOG2);
-							imshow("Current Frame", cvMat);
-							resizeWindow("Current Frame", rowsize / 2, colsize / 2);
-							waitKey(1);
-							// destroyWindow("Subtraction");
+						circle(cvMat, p, 5, Scalar(255, 255, 255), -1);
+						imshow("Current Frame", cvMat);
+						waitKey(1);
+
 					}
 					imageCnt = imageCnt + 1;
 					// cin >> userInput;
-					
-					
-					
 
 					
 					
-
+					auto stop = high_resolution_clock::now();
+					auto duration = duration_cast<microseconds>(stop - start);
+					long long timeDelay = duration.count();
+					cout << duration.count() << endl;
+					
+					
+					
+					
 
 
 
@@ -319,6 +381,8 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
                 // images) need to be released in order to keep from filling the
                 // buffer.
                 //
+
+			
                 pResultImage->Release();
 
                 cout << endl;
@@ -426,6 +490,100 @@ int RunSingleCamera(CameraPtr pCam)
     return result;
 }
 
+int xError(vector<int> xloc, int count) {
+	int xErr = abs(xloc.at(count) - xloc.at(count - 1));
+
+	return xErr;
+}
+
+int yError(vector<int> yloc, int count) {
+	int yErr = abs(yloc.at(count) - yloc.at(count - 1));
+
+	return yErr;
+}
+
+tuple<int,bool> calcStep(vector<int> centLoc, int targetDist, int count, long long time) {
+	int stepSize = 0;
+	int vCount = 0;
+	vector<int> step4V;
+	int vdiff = 0;
+	double velocity = 0.0;
+	int pixelVal = 0;
+	int currentX = centLoc.at(count);
+	if (vCount >= 1) {
+		vdiff = abs(step4V.at(vCount) - step4V.at(vCount - 1));
+	}
+
+
+	if ((vCount < 1) || (vdiff > 0.01)) {
+		if (targetDist == 50) {
+			if (currentX > stepSet) {
+				pixelVal = abs(currentX - stepSet);
+				stepSize = ceil(.345*pixelVal);
+				dirLogic = false;
+			}
+
+			else if (currentX < stepSet) {
+				pixelVal = abs(currentX - stepSet);
+				stepSize = ceil(.345*pixelVal);
+				dirLogic = true;
+			}
+		}
+
+		else if (targetDist == 300) {
+			if (currentX > stepSet) {
+				pixelVal = abs(currentX - stepSet);
+				stepSize = ceil(0.1858*pixelVal);
+				dirLogic = false;
+			}
+
+			else if (currentX < stepSet) {
+				pixelVal = abs(currentX - stepSet);
+				stepSize = ceil(0.1858*pixelVal);
+				dirLogic = true;
+			}
+		}
+	}
+
+	else {
+		if (targetDist == 50) {
+			if (currentX > stepSet) {
+				pixelVal = abs(currentX - stepSet);
+				stepSize = ceil(.345*pixelVal);
+				stepSize = vdiff * time + stepSize;
+				dirLogic = false;
+			}
+
+			else if (currentX < stepSet) {
+				pixelVal = abs(currentX - stepSet);
+				stepSize = ceil(.345*pixelVal);
+				stepSize = vdiff * time + stepSize;
+				dirLogic = true;
+			}
+		}
+
+		else if (targetDist == 300) {
+			if (currentX > stepSet) {
+				pixelVal = abs(currentX - stepSet);
+				stepSize = ceil(0.1858*pixelVal);
+				stepSize = vdiff * time + stepSize;
+				dirLogic = false;
+			}
+
+			else if (currentX < stepSet) {
+				pixelVal = abs(currentX - stepSet);
+				stepSize = ceil(0.1858*pixelVal);
+				stepSize = vdiff * time + stepSize;
+				dirLogic = true;
+			}
+		}
+	}
+	
+
+	step4V.push_back(stepSize);
+	stepSet = currentX;
+	return make_tuple(stepSize, dirLogic);
+}
 
 // Example entry point; please see Enumeration example for more in-depth 
 // comments on preparing and cleaning up the system.
@@ -450,8 +608,12 @@ int main(int /*argc*/, char** /*argv*/)
 	*/
 
     int result = 0;
+	string centerCheck;
+	int centerStep = 0;
+	int calStep = 0;
 
     stepperControl.Open();
+
 
     // Print application build information
     // cout << "Application build date: " << __DATE__ << " " << __TIME__ << endl << endl;
@@ -515,6 +677,90 @@ int main(int /*argc*/, char** /*argv*/)
         // cout << endl << "Running example for camera " << i << "..." << endl;
 
         // Run example
+		cout << "Adjust laser to center position (enter r and l to adjust, done when centered): ";
+		cin >> centerCheck;
+		cout << endl;
+		while (centerCheck.compare("done") != 0) {
+			if (centerCheck.compare("r") == 0) {
+				cout << "Enter step size: ";
+				cin >> centerStep;
+				cout << endl;
+				dirLogic = false;
+				// Pass in direction and step size to motor movement function
+				stepperControl.WriteMessage(dirLogic, centerStep);
+			}
+
+			else if (centerCheck.compare("l") == 0) {
+				cout << "Enter step size: ";
+				cin >> centerStep;
+				cout << endl;
+				dirLogic = true;
+				// Pass in direction and step size to motor movement function
+				stepperControl.WriteMessage(dirLogic, centerStep);
+			}
+
+			cout << "Adjust laser to center position (enter r and l to adjust, done when centered): ";
+			cin >> centerCheck;
+			cout << endl;
+
+		}
+
+
+		cout << "Enter distance: ";
+		cin >> targetDist;
+		/* cout << endl;
+		cout << "Enter point of entry (r or l): ";
+		cin >> entry;
+		cout << endl;
+		while ((entry.compare("r") != 0) && (entry.compare("l") != 0)) {
+			cout << "Incorrect input, please enter r or l: ";
+			cin >> entry;
+			cout << endl;
+		}
+
+		if (entry.compare("r") == 0) {
+			if (targetDist == 50) {
+				dirLogic = false;
+				calStep = 276;
+				// Pass in motor to move to right most position for 50 meters
+				stepperControl.WriteMessage(dirLogic, calStep);
+				// then set dirLogic to be ready to move to the left
+				dirLogic = true;
+			}
+
+			else if (targetDist == 300) {
+				calStep = 149;
+				dirLogic = false;
+				// Pass in motor to move to right most position for 300 meters
+				stepperControl.WriteMessage(dirLogic, calStep);
+				// then set dirLogic to be ready to move to the left
+				dirLogic = true;
+			}
+
+		}
+
+		else if (entry.compare("l") == 0) {
+			if (targetDist == 50) {
+				dirLogic = true;
+				calStep = 276;
+				// Pass in motor to move to left most position for 50 meters
+				stepperControl.WriteMessage(dirLogic, calStep);
+				// then set dirLogic to be ready to move to the right
+				dirLogic = false;
+			}
+
+			else if (targetDist == 300) {
+				calStep = 149;
+				dirLogic = true;
+				// Pass in motor to move to left most position for 300 meters
+				stepperControl.WriteMessage(dirLogic, calStep);
+				// then set dirLogic to be ready to move to the right
+				dirLogic = false;
+
+			}
+		}*/
+
+
         result = result | RunSingleCamera(pCam);
 		
         // cout << "Camera " << i << " example complete..." << endl << endl;

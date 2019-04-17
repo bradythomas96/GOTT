@@ -12,12 +12,12 @@ SerialInterface::SerialInterface()
 
 bool SerialInterface::Open()
 {
-    mSerialPort = CreateFile("\\\\.\\COM1", GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    mSerialPort = CreateFile("\\\\.\\COM4", GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
     if (!GetCommState(mSerialPort, &mSerialParams)) {
         return false;
     }
-    mSerialParams.BaudRate = CBR_38400;
+    mSerialParams.BaudRate = CBR_115200;
     mSerialParams.ByteSize = 8;
     mSerialParams.StopBits = ONESTOPBIT;
     mSerialParams.Parity = NOPARITY;
@@ -49,5 +49,5 @@ bool SerialInterface::WriteMessage(bool dir, int step)
     int index = strlen(message);
     strncpy(&message[index], "\r\n", 3);
 
-    bool retval = WriteFile(mSerialPort, message, strlen(message), &bytesWritten, NULL);
+    return WriteFile(mSerialPort, message, strlen(message), bytesWritten, NULL);
 }
