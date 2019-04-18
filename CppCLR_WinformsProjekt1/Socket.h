@@ -26,8 +26,10 @@
 
 #ifndef SOCKET_H
 #define SOCKET_H
+#include "stdafx.h"
 
 #include <WinSock2.h>
+#pragma comment(lib, "Ws2_32.lib")
 
 #include <string>
 

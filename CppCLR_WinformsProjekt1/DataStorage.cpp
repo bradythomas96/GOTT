@@ -1,15 +1,22 @@
+#include "stdafx.h"
 #include "DataStorage.h"
 #include <string>
 #include <vector>
 
 
+DWORD WINAPI Thread(LPVOID lpparm) {
+	DataExchange::Instance()->ReadThread();
+
+	return 0;
+}
+
 DataExchange::DataExchange(){
     mMode = GUI;
 }
 DataExchange* DataExchange::Instance() {
-    if( 0 == mInstance ) {
-        mInstance = new DataExchange();
-    }
+	static DataExchange instance;
+
+	return &instance;
 }
 
 void DataExchange::SetMode(DataExchange::DE_MODE mode){
@@ -52,15 +59,16 @@ bool DataExchange::Serialize(char* databuffer) {
 bool DataExchange::Deserialize(char* databuffer) {
     bool retval = true;
     char* token;
+	const char* del = " ";
 
     if ( GUI == mMode) {
-        token = strtok(databuffer, " ");
+        token = strtok(databuffer, del);
 
         for (int i = 1; i < ACQ_TYPES; i++) {
             acq_data[i] = std::stoi(token);
         }
     } else if ( ACQ == mMode ) {
-        token = strtok(databuffer, " ");
+        token = strtok(databuffer, del);
 
         for (int i = 1; i < GUI_TYPES; i++) {
             gui_data[i] = std::stoi(token);
@@ -69,7 +77,7 @@ bool DataExchange::Deserialize(char* databuffer) {
         retval = false;
     }
     
-    this->Event();
+    this->Event(UPDATE_TYPE::DATA_UPDATE);
     
     return retval;
 }
@@ -89,11 +97,13 @@ bool DataExchange::Connect() {
     mHandle = CreateThread(
         NULL,
         0,
-        this->ReadThread,
+        Thread,
         NULL,
         0,
         &mThreadID
     );
+
+	return true;
 }
 
 bool DataExchange::Disconnect() {
@@ -102,6 +112,8 @@ bool DataExchange::Disconnect() {
     mConnection->Close();
     delete mConnection;
     mConnection = 0;
+
+	return true;
 }
 
 void DataExchange::Update() {
@@ -122,18 +134,24 @@ void DataExchange::MoveLaser(bool dir){
 void DataExchange::ReadThread(){
     while(true){
         std::string data = mConnection->ReceiveLine();
+		size_t i = data.length();
+		char* dataptr = new char[i];
+		strcpy(dataptr, data.c_str());
+
         if (GUI == mMode) {
-            this->Deserialize(data.c_str);
+            this->Deserialize((dataptr));
             this->Event(UPDATE_TYPE::DATA_UPDATE);
         } else {
-            if (data.c_str[0] == 'r'){
+            if ((data.c_str())[0] == 'r'){
                 this->Event(UPDATE_TYPE::MOVE_RIGHT);
-            } else if (data.c_str[0] == 'l') {
+            } else if ((data.c_str())[0] == 'l') {
                 this->Event(UPDATE_TYPE::MOVE_LEFT);
             } else {
                 this->Event(UPDATE_TYPE::DATA_UPDATE);
             }
         }
+
+		delete dataptr;
 
     }
 }

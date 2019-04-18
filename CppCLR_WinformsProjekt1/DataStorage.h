@@ -2,9 +2,10 @@
 #define __DATAEXCHANGE_H__
 
 #include "Socket.h"
-#include <windows.h>
+#include <vector>
+#include <Windows.h>
 
-typedef void (*fCallBack)(DataExchange::UPDATE_TYPE);
+typedef void (*fCallBack)(int t);
 
 class DataExchange {
 public:
@@ -56,16 +57,16 @@ public:
 
 	int acq_data[ACQ_TYPES];
 	int gui_data[GUI_TYPES];
+	void ReadThread();
 
 	private:
 	// An event has occured from the socket
 	void Event(UPDATE_TYPE t);
-	void ReadThread();
+
 
 	Socket* mConnection;
 	std::vector<std::string> DataExchange::SplitString(std::string);
 	DE_MODE mMode;
-	static DataExchange* mInstance;
 	fCallBack mEventCallback;
 	DWORD mThreadID;
 	HANDLE mHandle;

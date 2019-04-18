@@ -17,7 +17,7 @@ void UpdateForm() {
 	ManagedGlobals::mform->Refresh();	
 }
 
-void FormUpdateCallback(void) {
+void FormUpdateCallback(int t) {
 	UpdateForm();
 }
 
@@ -34,11 +34,14 @@ void FormUpdateCallback(void) {
 [STAThread]
 int GUI_main() 
 {
-	DataExchange->Instance()->RegisterCallback(FormUpdateCallback);
+	DataExchange::Instance()->SetMode(DataExchange::GUI);
+	DataExchange::Instance()->Connect();
+	DataExchange::Instance()->RegisterCallback(FormUpdateCallback);
 	Application::EnableVisualStyles();
 	Application::SetCompatibleTextRenderingDefault(false);
-	CppCLR_WinformsProjekt::Form1 form(&dataobject);
+	CppCLR_WinformsProjekt::Form1 form;
 	ManagedGlobals::mform = %form;
 	Application::Run(%form); // "CppCLR_WinformsProjekt" noch anpassen
+	DataExchange::Instance()->Disconnect();
 	return 0;
 }
