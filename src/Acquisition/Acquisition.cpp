@@ -88,7 +88,7 @@ long long timeDelay = 0.320;
 ( std::ostringstream() << std::dec << x ) ).str()
 
 
-tuple<int,bool> calcStep(vector<int> xloc, int targetDist, int count, long long timeDelay);
+tuple<int,bool> calcStep(vector<int> xloc, int targetDist, int count, unsigned int timeDelay);
 int xError(vector<int> xloc, int count);
 int yError(vector<int> yloc, int count);
 
@@ -307,7 +307,7 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
 
 
 
-					if (imageCnt % 15 == 0) {
+					if (imageCnt % 14 == 0) {
 						namedWindow("Current Frame", WINDOW_AUTOSIZE);
 						pMOG2->apply(cvMat, fgMaskMOG2);
 						threshold(fgMaskMOG2, thresh, 0, 255, 0);
@@ -361,8 +361,8 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
 					
 					
 					auto stop = high_resolution_clock::now();
-					auto duration = duration_cast<microseconds>(stop - start);
-					long long timeDelay = duration.count();
+					auto duration = duration_cast<milliseconds>(stop - start);
+					unsigned int timeDelay = (unsigned int) duration.count();
 					cout << duration.count() << endl;
 					
 					
@@ -502,7 +502,7 @@ int yError(vector<int> yloc, int count) {
 	return yErr;
 }
 
-tuple<int,bool> calcStep(vector<int> centLoc, int targetDist, int count, long long time) {
+tuple<int,bool> calcStep(vector<int> centLoc, int targetDist, int count, unsigned int time) {
 	int stepSize = 0;
 	int vCount = 0;
 	vector<int> step4V;
@@ -533,19 +533,22 @@ tuple<int,bool> calcStep(vector<int> centLoc, int targetDist, int count, long lo
 		else if (targetDist == 300) {
 			if (currentX > stepSet) {
 				pixelVal = abs(currentX - stepSet);
-				stepSize = ceil(0.1858*pixelVal);
+				stepSize = ceil(0.186*pixelVal);
+				stepSize += ceil(0.3*stepSize);
 				dirLogic = false;
 			}
 
 			else if (currentX < stepSet) {
 				pixelVal = abs(currentX - stepSet);
-				stepSize = ceil(0.1858*pixelVal);
+				stepSize = ceil(0.186*pixelVal);
+				stepSize += ceil(0.3*stepSize);
 				dirLogic = true;
 			}
 		}
 	}
 
-	else {
+	
+	/*else {
 		if (targetDist == 50) {
 			if (currentX > stepSet) {
 				pixelVal = abs(currentX - stepSet);
@@ -575,9 +578,9 @@ tuple<int,bool> calcStep(vector<int> centLoc, int targetDist, int count, long lo
 				stepSize = ceil(0.1858*pixelVal);
 				stepSize = vdiff * time + stepSize;
 				dirLogic = true;
-			}
-		}
-	}
+			} 
+		} 
+	}*/
 	
 
 	step4V.push_back(stepSize);
