@@ -66,6 +66,7 @@ public:
 
 	Socket* mConnection;
 	std::vector<std::string> DataExchange::SplitString(std::string);
+	static DataExchange* mInstance;
 	DE_MODE mMode;
 	fCallBack mEventCallback;
 	DWORD mThreadID;

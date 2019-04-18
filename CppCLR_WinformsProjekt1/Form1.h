@@ -37,7 +37,6 @@ namespace CppCLR_WinformsProjekt {
 			tgtX->Text = gcnew String(Convert::ToString(data->acq_data[DataExchange::TARGET_X]));
 			tgtY->Text = gcnew String(Convert::ToString(data->acq_data[DataExchange::TARGET_Y]));
 			vel->Text = gcnew String(Convert::ToString(data->acq_data[DataExchange::VELOCITY]));
-
 		}
 
 	protected:
@@ -93,8 +92,6 @@ namespace CppCLR_WinformsProjekt {
 	private: System::Windows::Forms::Button^  button1;
 	private: System::Windows::Forms::Button^  button2;
 	private: System::Windows::Forms::Label^  label16;
-	private: 
-	private: DataExchange* data;
 	private: System::Windows::Forms::TextBox^  vel;
 	private: System::Windows::Forms::Label^  label18;
 	private: System::Windows::Forms::TextBox^  pwr;

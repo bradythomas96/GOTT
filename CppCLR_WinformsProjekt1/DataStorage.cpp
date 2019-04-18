@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+DataExchange* DataExchange::mInstance;
 
 DWORD WINAPI Thread(LPVOID lpparm) {
 	DataExchange::Instance()->ReadThread();
@@ -14,9 +15,11 @@ DataExchange::DataExchange(){
     mMode = GUI;
 }
 DataExchange* DataExchange::Instance() {
-	static DataExchange instance;
+	if (mInstance == 0) {
+		mInstance = new DataExchange();
+	}
 
-	return &instance;
+	return mInstance;
 }
 
 void DataExchange::SetMode(DataExchange::DE_MODE mode){
@@ -89,9 +92,9 @@ void DataExchange::Event(UPDATE_TYPE t) {
 
 bool DataExchange::Connect() {
     if (GUI == mMode) {
-        mConnection = new SocketServer(3000, 1 );
+		mConnection = new SocketServer(3000, 1);
     } else {
-        mConnection = new SocketClient("127.0.0.1", 3000);
+		mConnection = new SocketClient("127.0.0.1", 3000);
     }
 
     mHandle = CreateThread(
