@@ -4,7 +4,7 @@
 #include "Socket.h"
 #include <windows.h>
 
-typedef void (*fCallBack)(void);
+typedef void (*fCallBack)(DataExchange::UPDATE_TYPE);
 
 class DataExchange {
 public:
@@ -34,6 +34,12 @@ public:
 		GUI_TYPES
 	};
 
+	enum UPDATE_TYPE {
+		MOVE_LEFT,
+		MOVE_RIGHT,
+		DATA_UPDATE
+	};
+
 	DataExchange();
 	void SetMode(DE_MODE mode);
 	static DataExchange* Instance();
@@ -46,14 +52,14 @@ public:
 	
 	// We need to push data across the socket.
 	void Update();
-
+	void MoveLaser(bool dir);
 
 	int acq_data[ACQ_TYPES];
 	int gui_data[GUI_TYPES];
 
 	private:
 	// An event has occured from the socket
-	void Event();
+	void Event(UPDATE_TYPE t);
 	void ReadThread();
 
 	Socket* mConnection;

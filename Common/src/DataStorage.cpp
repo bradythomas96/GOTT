@@ -74,9 +74,9 @@ bool DataExchange::Deserialize(char* databuffer) {
     return retval;
 }
 
-void DataExchange::Event() {
+void DataExchange::Event(UPDATE_TYPE t) {
     if (mEventCallback)
-        mEventCallback();
+        mEventCallback(t);
 }
 
 bool DataExchange::Connect() {
@@ -108,14 +108,32 @@ void DataExchange::Update() {
     char databuff[1024];
     Serialize(databuff);
     std::string dataToSend(databuff);
-
     mConnection->SendLine(dataToSend);
+}
+
+void DataExchange::MoveLaser(bool dir){
+    if (!dir) { 
+        mConnection->SendLine(std::string("r"));
+    } else {
+        mConnection->SendLine(std::string("l"));
+    }
 }
 
 void DataExchange::ReadThread(){
     while(true){
         std::string data = mConnection->ReceiveLine();
-        this->Deserialize();
-        this->Event();
+        if (GUI == mMode) {
+            this->Deserialize(data.c_str);
+            this->Event(UPDATE_TYPE::DATA_UPDATE);
+        } else {
+            if (data.c_str[0] == 'r'){
+                this->Event(UPDATE_TYPE::MOVE_RIGHT);
+            } else if (data.c_str[0] == 'l') {
+                this->Event(UPDATE_TYPE::MOVE_LEFT);
+            } else {
+                this->Event(UPDATE_TYPE::DATA_UPDATE);
+            }
+        }
+
     }
 }
