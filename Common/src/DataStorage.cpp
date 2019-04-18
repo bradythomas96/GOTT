@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+
 DataExchange::DataExchange(){
     mMode = GUI;
 }
@@ -76,4 +77,45 @@ bool DataExchange::Deserialize(char* databuffer) {
 void DataExchange::Event() {
     if (mEventCallback)
         mEventCallback();
+}
+
+bool DataExchange::Connect() {
+    if (GUI == mMode) {
+        mConnection = new SocketServer(3000, 1 );
+    } else {
+        mConnection = new SocketClient("127.0.0.1", 3000);
+    }
+
+    mHandle = CreateThread(
+        NULL,
+        0,
+        this->ReadThread,
+        NULL,
+        0,
+        &mThreadID
+    );
+}
+
+bool DataExchange::Disconnect() {
+    TerminateThread(mHandle, NULL);
+
+    mConnection->Close();
+    delete mConnection;
+    mConnection = 0;
+}
+
+void DataExchange::Update() {
+    char databuff[1024];
+    Serialize(databuff);
+    std::string dataToSend(databuff);
+
+    mConnection->SendLine(dataToSend);
+}
+
+void DataExchange::ReadThread(){
+    while(true){
+        std::string data = mConnection->ReceiveLine();
+        this->Deserialize();
+        this->Event();
+    }
 }
