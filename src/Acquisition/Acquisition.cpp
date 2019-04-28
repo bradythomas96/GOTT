@@ -191,7 +191,7 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
         const unsigned int k_numImages = 5;
 		char userInput;
 		// cin >> userInput;
-		pMOG2 = createBackgroundSubtractorMOG2(5,32,false);
+		pMOG2 = createBackgroundSubtractorMOG2(10,32,false);
 		
 		
 
@@ -307,7 +307,7 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
 
 
 
-					if (imageCnt % 14 == 0) {
+					if (imageCnt % 25 == 0) {
 						namedWindow("Current Frame", WINDOW_AUTOSIZE);
 						pMOG2->apply(cvMat, fgMaskMOG2);
 						threshold(fgMaskMOG2, thresh, 0, 255, 0);
@@ -325,27 +325,8 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
 							step = get<0>(stepData);
 							dirLogic = get<1>(stepData);
 
-							if (targetDist == 300)
-							{
-								//step this much
-								printf("%d, %d\r\n", dirLogic, step);
-								stepperControl.WriteMessage(dirLogic, step);
-								stepCount += step;
-								if ((stepCount >= 298) && (imageCnt > 1400)) {
-									break;
-								}
-
-							}
-
-							else if (targetDist == 50) {
-								//step this much
-								printf("%d, %d\r\n", dirLogic, step);
-								stepperControl.WriteMessage(dirLogic, step);
-								stepCount += step;
-								if ((stepCount >= 552) && (imageCnt > 460)) {
-									break;
-								}
-							}
+							
+							
 
 						}
 						i += 1;
@@ -358,6 +339,27 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
 					imageCnt = imageCnt + 1;
 					// cin >> userInput;
 
+					if (targetDist == 300)
+					{
+						//step this much
+						printf("%d, %d\r\n", dirLogic, step);
+						stepperControl.WriteMessage(dirLogic, step);
+						stepCount += step;
+						if ((stepCount >= 298) && (imageCnt > 1400)) {
+							break;
+						}
+
+					}
+
+					else if (targetDist == 50) {
+						//step this much
+						printf("%d, %d\r\n", dirLogic, step);
+						stepperControl.WriteMessage(dirLogic, step);
+						stepCount += step;
+						if ((stepCount >= 556) && (imageCnt > 590)) {
+							break;
+						}
+					}
 					
 					
 					auto stop = high_resolution_clock::now();
@@ -519,13 +521,13 @@ tuple<int,bool> calcStep(vector<int> centLoc, int targetDist, int count, unsigne
 		if (targetDist == 50) {
 			if (currentX > stepSet) {
 				pixelVal = abs(currentX - stepSet);
-				stepSize = ceil(.345*pixelVal);
+				stepSize = ceil(.345*pixelVal/25);
 				dirLogic = false;
 			}
 
 			else if (currentX < stepSet) {
 				pixelVal = abs(currentX - stepSet);
-				stepSize = ceil(.345*pixelVal);
+				stepSize = ceil(.345*pixelVal/25);
 				dirLogic = true;
 			}
 		}
@@ -533,14 +535,14 @@ tuple<int,bool> calcStep(vector<int> centLoc, int targetDist, int count, unsigne
 		else if (targetDist == 300) {
 			if (currentX > stepSet) {
 				pixelVal = abs(currentX - stepSet);
-				stepSize = ceil(0.186*pixelVal);
+				stepSize = ceil(0.186*pixelVal/5);
 				stepSize += ceil(0.3*stepSize);
 				dirLogic = false;
 			}
 
 			else if (currentX < stepSet) {
 				pixelVal = abs(currentX - stepSet);
-				stepSize = ceil(0.186*pixelVal);
+				stepSize = ceil(0.186*pixelVal/5);
 				stepSize += ceil(0.3*stepSize);
 				dirLogic = true;
 			}

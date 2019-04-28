@@ -6,7 +6,7 @@
 DataExchange* DataExchange::mInstance;
 
 DWORD WINAPI Thread(LPVOID lpparm) {
-	DataExchange::Instance()->ReadThread();
+	//DataExchange::Instance()->ReadThread();
 
 	return 0;
 }
@@ -68,13 +68,13 @@ bool DataExchange::Deserialize(char* databuffer) {
         token = strtok(databuffer, del);
 
         for (int i = 1; i < ACQ_TYPES; i++) {
-            acq_data[i] = std::stoi(token);
+				acq_data[i] = std::stoi(token);
         }
     } else if ( ACQ == mMode ) {
         token = strtok(databuffer, del);
 
         for (int i = 1; i < GUI_TYPES; i++) {
-            gui_data[i] = std::stoi(token);
+				gui_data[i] = std::stoi(token);
         }
     } else {
         retval = false;
