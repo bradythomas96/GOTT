@@ -307,7 +307,7 @@ int AcquireImages(CameraPtr pCam, INodeMap & nodeMap, INodeMap & nodeMapTLDevice
 
 
 
-					if (imageCnt % 25 == 0) {
+					if (imageCnt % 10 == 0) {
 						namedWindow("Current Frame", WINDOW_AUTOSIZE);
 						pMOG2->apply(cvMat, fgMaskMOG2);
 						threshold(fgMaskMOG2, thresh, 0, 255, 0);
@@ -521,13 +521,13 @@ tuple<int,bool> calcStep(vector<int> centLoc, int targetDist, int count, unsigne
 		if (targetDist == 50) {
 			if (currentX > stepSet) {
 				pixelVal = abs(currentX - stepSet);
-				stepSize = ceil(.345*pixelVal/25);
+				stepSize = ceil(.345*pixelVal/10);
 				dirLogic = false;
 			}
 
 			else if (currentX < stepSet) {
 				pixelVal = abs(currentX - stepSet);
-				stepSize = ceil(.345*pixelVal/25);
+				stepSize = ceil(.345*pixelVal/10);
 				dirLogic = true;
 			}
 		}
